@@ -460,29 +460,29 @@ try {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      nombre: nombre,        // variable que ya tienes
+      nombre: nombre,
       id: PERFIL_ID,
-      repo: 'bakerdatagarcia-b86.github.io'  // ← cámbialo por el nombre de cada QR
+      repo: 'bakerdatagarcia-b86.github.io'  // cámbialo por cada QR
     })
   });
   const datosRespuesta = await respuesta.json();
   console.log('Notificación enviada a Pushover:', datosRespuesta);
 } catch (error) {
   console.error('Error al notificar a Pushover:', error);
-  // No bloquea la activación del QR
 }
 // --- Fin del nuevo código ---
 
 document.getElementById('exito-id-valor').textContent = PERFIL_ID;
 mostrar('p-exito', true);
 
-  window.verMiPerfil = function() {
-    if (window._dG) {
-      mostrarFicha(window._dG, true);
-    } else {
-      cargarPerfil();
-    }
-  };
+} catch(e) {   // ← cierre del try externo
+  console.error(e);
+  errorText.textContent = 'Error: ' + e.message;
+  errorDiv.style.display = 'flex';
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar mi perfil de emergencia';
+}
+};   // ← cierre de la función guardarPerfil
 
   window.regresarDesdeFormulario = function() {
     if (window._dG) {
