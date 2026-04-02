@@ -320,6 +320,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  
   const firebaseConfig = {
     apiKey: "AIzaSyB0fs01xzRwNPDRQ-uA5XGTQ50TtKMaiTs",
     authDomain: "moto-sticker-qr-28c34.firebaseapp.com",
@@ -338,11 +339,13 @@
     let pts = l.split('-');
     return pts[pts.length - 1].split('.')[0];
   }
+  
   function ocultarTel(t) {
     const l = t.replace(/\D/g, '');
     if (l.length < 4) return t;
     return l.slice(-10, -8) + '••••••' + l.slice(-2);
   }
+  
   const PERFIL_ID = obtenerID();
   document.getElementById('badge-id').textContent = 'Sticker ID: ' + PERFIL_ID;
   window._dG = null;
@@ -361,23 +364,6 @@
       history.pushState({ pantalla: id }, '', window.location.href);
     }
   };
-
-  async function cargarPerfil() {
-    try {
-      const snap = await getDoc(doc(db, 'perfiles', PERFIL_ID));
-      if (snap.exists()) {
-        const data = snap.data();
-        window._dG = data;
-        mostrarFicha(data, true);
-      } else {
-        window._dG = null;
-        mostrar('p-bienvenida', true);
-      }
-    } catch(e) {
-      console.error(e);
-      mostrar('p-bienvenida', true);
-    }
-  }
 
   window.mostrarFicha = function(d, replaceHistory = false) {
     window._dG = d;
@@ -405,6 +391,39 @@
     }
     mostrar('p-ficha', replaceHistory);
   };
+
+  window.verMiPerfil = function() {
+    if (window._dG) {
+      mostrarFicha(window._dG, true);
+    } else {
+      cargarPerfil();
+    }
+  };
+
+  window.regresarDesdeFormulario = function() {
+    if (window._dG) {
+      mostrarFicha(window._dG, false);
+    } else {
+      mostrar('p-bienvenida', false);
+    }
+  };
+
+  async function cargarPerfil() {
+    try {
+      const snap = await getDoc(doc(db, 'perfiles', PERFIL_ID));
+      if (snap.exists()) {
+        const data = snap.data();
+        window._dG = data;
+        mostrarFicha(data, true);
+      } else {
+        window._dG = null;
+        mostrar('p-bienvenida', true);
+      }
+    } catch(e) {
+      console.error(e);
+      mostrar('p-bienvenida', true);
+    }
+  }
 
   window.guardarPerfil = async function() {
     const nombre = document.getElementById('f-nombre').value.trim();
@@ -451,52 +470,36 @@
         ],
         activadoEn: new Date().toISOString()
       };
-await setDoc(doc(db, 'perfiles', PERFIL_ID), datos);
-window._dG = datos;
+      await setDoc(doc(db, 'perfiles', PERFIL_ID), datos);
+      window._dG = datos;
 
-// --- NUEVO: Notificar a Pushover (endpoint central) ---
-try {
-  const respuesta = await fetch('https://us-central1-moto-sticker-qr-28c34.cloudfunctions.net/notificarPushover', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      nombre: nombre,
-      id: PERFIL_ID,
-      repo: 'bakerdatagarcia-b86.github.io'  // cámbialo por cada QR
-    })
-  });
-  const datosRespuesta = await respuesta.json();
-  console.log('Notificación enviada a Pushover:', datosRespuesta);
-} catch (error) {
-  console.error('Error al notificar a Pushover:', error);
-}
-// --- Fin del nuevo código ---
+      // Notificación a Pushover (endpoint central)
+      try {
+        const respuesta = await fetch('https://us-central1-moto-sticker-qr-28c34.cloudfunctions.net/notificarPushover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: nombre,
+            id: PERFIL_ID,
+            repo: 'bakerdatagarcia-b2.github.io'  // ← cambia por cada QR
+          })
+        });
+        const datosRespuesta = await respuesta.json();
+        console.log('Notificación enviada a Pushover:', datosRespuesta);
+      } catch (error) {
+        console.error('Error al notificar a Pushover:', error);
+      }
 
-document.getElementById('exito-id-valor').textContent = PERFIL_ID;
-mostrar('p-exito', true);
-
-} catch(e) {   // ← cierre del try externo
-  console.error(e);
-  errorText.textContent = 'Error: ' + e.message;
-  errorDiv.style.display = 'flex';
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar mi perfil de emergencia';
-}
-};   // ← cierre de la función guardarPerfil
-
-  window.regresarDesdeFormulario = function() {
-    if (window._dG) {
-      mostrarFicha(window._dG, false);
-    } else {
-      mostrar('p-bienvenida', false);
+      document.getElementById('exito-id-valor').textContent = PERFIL_ID;
+      mostrar('p-exito', true);
+    } catch(e) {
+      console.error(e);
+      errorText.textContent = 'Error: ' + e.message;
+      errorDiv.style.display = 'flex';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Activar mi perfil de emergencia';
     }
   };
-
-  window.addEventListener('popstate', function(event) {
-    cargarPerfil();
-  });
-
-  cargarPerfil();
 
   window.previsualizarFoto = function(input) {
     if (!input.files || !input.files[0]) return;
@@ -512,17 +515,10 @@ mostrar('p-exito', true);
     };
     reader.readAsDataURL(input.files[0]);
   };
-</script>
 
-<script>
-  (function() {
-    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
-        e.preventDefault();
-      }
-    });
-  })();
+  // Inicializar
+  cargarPerfil();
+  window.addEventListener('popstate', () => cargarPerfil());
 </script>
 </body>
 </html>
